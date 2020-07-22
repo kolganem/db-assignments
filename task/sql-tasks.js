@@ -405,7 +405,6 @@ async function task_1_18(db) {
  *
  */
 async function task_1_19(db) {
-    //Some problem with "`"
     let result = await db.query(`
     SELECT 
         Orders.CustomerID AS "CustomerID",
@@ -437,7 +436,7 @@ async function task_1_20(db) {
         SUM(OrderDetails.UnitPrice * OrderDetails.Quantity) AS 'Amount, $'
     FROM Orders
     JOIN Employees ON Orders.EmployeeID = Employees.EmployeeID
-    JOIN OrderDetails ON Orders.OrderID = orderdetails.OrderID
+    JOIN OrderDetails ON Orders.OrderID = OrderDetails.OrderID
     GROUP BY Employees.EmployeeID
     ORDER BY \`Amount, $\` DESC
     LIMIT 1;
