@@ -127,12 +127,12 @@ async function task_1_5(db) {
 async function task_1_6(db) {
     let result = await db.query(`
     SELECT 
-	    products.ProductName AS "ProductName",
-        categories.CategoryName AS "CategoryName",
-        suppliers.CompanyName AS "SupplierCompanyName"
+	Products.ProductName AS "ProductName",
+        Categories.CategoryName AS "CategoryName",
+        Suppliers.CompanyName AS "SupplierCompanyName"
     FROM Products 
-    JOIN categories ON products.CategoryID = categories.CategoryID 
-    JOIN suppliers ON suppliers.SupplierID = products.SupplierID 
+    JOIN Categories ON Products.CategoryID = Categories.CategoryID 
+    JOIN Suppliers ON Suppliers.SupplierID = Products.SupplierID 
     ORDER BY ProductName, 'SupplierCompanyName';
     `);
     return result[0];
@@ -175,7 +175,7 @@ async function task_1_8(db) {
         CategoryName as "CategoryName",
         COUNT(fromProd.ProductID) AS "TotalNumberOfProducts"
     FROM Categories categ
-    LEFT JOIN products fromProd ON categ.categoryID = fromProd.categoryID
+    LEFT JOIN Products fromProd ON categ.categoryID = fromProd.categoryID
     GROUP BY categ.categoryID
     ORDER BY CategoryName;
     `);
@@ -366,10 +366,10 @@ async function task_1_17(db) {
     let result = await db.query(`
     SELECT 
         CategoryName AS "CategoryName",
-        AVG(products.UnitPrice) AS "AvgPrice"
+        AVG(Products.UnitPrice) AS "AvgPrice"
     FROM Categories
-    LEFT JOIN Products ON categories.CategoryID = products.CategoryID
-    GROUP BY categories.CategoryID
+    LEFT JOIN Products ON Categories.CategoryID = Products.CategoryID
+    GROUP BY Categories.CategoryID
     ORDER BY AvgPrice DESC, CategoryName;
     `);
     return result[0];
@@ -408,12 +408,12 @@ async function task_1_19(db) {
     //Some problem with "`"
     let result = await db.query(`
     SELECT 
-        orders.CustomerID AS "CustomerID",
-        customers.CompanyName AS "CompanyName",
+        Orders.CustomerID AS "CustomerID",
+        Customers.CompanyName AS "CompanyName",
         SUM(UnitPrice * Quantity) AS "TotalOrdersAmount, $"
     FROM Orderdetails
-    JOIN Orders ON orderdetails.OrderID = orders.OrderID
-    JOIN Customers ON orders.CustomerID = customers.CustomerID
+    JOIN Orders ON orderdetails.OrderID = Orders.OrderID
+    JOIN Customers ON orders.CustomerID = Customers.CustomerID
     GROUP BY Orders.CustomerID
     HAVING \`TotalOrdersAmount, $\` > 10000
     ORDER BY \`TotalOrdersAmount, $\` DESC, \`CustomerID\`
