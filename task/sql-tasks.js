@@ -126,13 +126,13 @@ async function task_1_5(db) {
  */
 async function task_1_6(db) {
     let result = await db.query(`
-    SELECT 
+   SELECT 
 	ProductName,
-        categories.CategoryName AS "CategoryName",
-        suppliers.CompanyName AS "SupplierCompanyName"
+        Categories.CategoryName AS "CategoryName",
+        Suppliers.CompanyName AS "SupplierCompanyName"
     FROM Products 
-    JOIN categories ON products.CategoryID = categories.CategoryID 
-    JOIN suppliers ON suppliers.SupplierID = products.SupplierID 
+    JOIN Categories ON Products.CategoryID = Categories.CategoryID 
+    JOIN Suppliers ON Suppliers.SupplierID = Products.SupplierID 
     ORDER BY ProductName, 'SupplierCompanyName';
     `);
     return result[0];
@@ -276,8 +276,8 @@ async function task_1_12(db) {
 async function task_1_13(db) {
     let result = await db.query(`
    SELECT
-        (SELECT COUNT() FROM Products WHERE Discontinued = 1) AS 'TotalOfDiscontinuedProducts',
-        (SELECT COUNT() FROM Products) AS 'TotalOfCurrentProducts';
+        (SELECT COUNT(*) FROM Products WHERE Discontinued = 1) AS \`TotalOfDiscontinuedProducts\`,
+        (SELECT COUNT(*) FROM Products) AS \`TotalOfCurrentProducts\`;
     `);
     return result[0];
 }
