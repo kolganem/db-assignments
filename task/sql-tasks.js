@@ -90,7 +90,7 @@ async function task_1_4(db) {
         ROUND(COUNT(OrderID)*100/SUM(count(OrderID)) OVER(),5) AS "% of all orders"
     FROM Orders
     GROUP BY CustomerID
-    ORDER BY COUNT(OrderID)/(SELECT COUNT(OrderID) from Orders)*100 DESC, CustomerID;
+    ORDER BY \`% of all orders\` DESC, CustomerID;
     `);
     return result[0];
 }
@@ -127,12 +127,12 @@ async function task_1_5(db) {
 async function task_1_6(db) {
     let result = await db.query(`
     SELECT 
-	Products.ProductName AS "ProductName",
-        Categories.CategoryName AS "CategoryName",
-        Suppliers.CompanyName AS "SupplierCompanyName"
+	ProductName,
+        categories.CategoryName AS "CategoryName",
+        suppliers.CompanyName AS "SupplierCompanyName"
     FROM Products 
-    JOIN Categories ON Products.CategoryID = Categories.CategoryID 
-    JOIN Suppliers ON Suppliers.SupplierID = Products.SupplierID 
+    JOIN categories ON products.CategoryID = categories.CategoryID 
+    JOIN suppliers ON suppliers.SupplierID = products.SupplierID 
     ORDER BY ProductName, 'SupplierCompanyName';
     `);
     return result[0];
@@ -252,16 +252,16 @@ async function task_1_11(db) {
 async function task_1_12(db) {
     // Why function TOP isn't supported ? Surprise :(
     let result = await db.query(`
-    SELECT 
-        s.ProductName AS 'ProductName', 
-        s.UnitPrice AS 'UnitPrice'
-    FROM (
-        SELECT *
-        FROM Products 
-        ORDER BY UnitPrice DESC 
-        LIMIT 20
-        ) s
-        ORDER BY UnitPrice ASC, ProductName;
+   SELECT 
+        ProductName, UnitPrice
+    FROM 
+        (SELECT 
+            ProductName, UnitPrice
+        FROM
+            Products
+        ORDER BY UnitPrice DESC
+        LIMIT 20) AS prod
+    ORDER BY UnitPrice, ProductName;
     `);
     return result[0];
 }
@@ -275,14 +275,9 @@ async function task_1_12(db) {
  */
 async function task_1_13(db) {
     let result = await db.query(`
-    SELECT(
-        SELECT 
-            COUNT(Discontinued) 
-        FROM Products) AS "TotalOfCurrentProducts",
-            
-        COUNT(Discontinued) AS "TotalOfDiscontinuedProducts" 
-    FROM Products
-    WHERE Discontinued = 1;
+   SELECT
+        (SELECT COUNT() FROM Products WHERE Discontinued = 1) AS 'TotalOfDiscontinuedProducts',
+        (SELECT COUNT() FROM Products) AS 'TotalOfCurrentProducts';
     `);
     return result[0];
 }
@@ -316,18 +311,18 @@ async function task_1_14(db) {
 async function task_1_15(db) {
     let result = await db.query(`
     SELECT 
-        COUNT(CASE WHEN MONTH(OrderDate) = 01 then 1 ELSE NULL END) AS "January",
-        COUNT(CASE WHEN MONTH(OrderDate) = 02 then 1 ELSE NULL END) AS "February",
-        COUNT(CASE WHEN MONTH(OrderDate) = 03 then 1 ELSE NULL END) AS "March",
-        COUNT(CASE WHEN MONTH(OrderDate) = 04 then 1 ELSE NULL END) AS "April",
-        COUNT(CASE WHEN MONTH(OrderDate) = 05 then 1 ELSE NULL END) AS "May",
-        COUNT(CASE WHEN MONTH(OrderDate) = 06 then 1 ELSE NULL END) AS "June",
-        COUNT(CASE WHEN MONTH(OrderDate) = 07 then 1 ELSE NULL END) AS "July",
-        COUNT(CASE WHEN MONTH(OrderDate) = 08 then 1 ELSE NULL END) AS "August",
-        COUNT(CASE WHEN MONTH(OrderDate) = 09 then 1 ELSE NULL END) AS "September",
-        COUNT(CASE WHEN MONTH(OrderDate) = 10 then 1 ELSE NULL END) AS "October",
-        COUNT(CASE WHEN MONTH(OrderDate) = 11 then 1 ELSE NULL END) AS "November",
-        COUNT(CASE WHEN MONTH(OrderDate) = 12 then 1 ELSE NULL END) AS "December"
+        COUNT(IF(MONTH(OrderDate) = 1, 1, NULL)) AS "January",
+        COUNT(IF(MONTH(OrderDate) = 2, 1, NULL)) AS "February",
+        COUNT(IF(MONTH(OrderDate) = 3, 1, NULL)) AS "March",
+        COUNT(IF(MONTH(OrderDate) = 4, 1, NULL)) AS "April",
+        COUNT(IF(MONTH(OrderDate) = 5, 1, NULL)) AS "May",
+        COUNT(IF(MONTH(OrderDate) = 6, 1, NULL)) AS "June",
+        COUNT(IF(MONTH(OrderDate) = 7, 1, NULL)) AS "July",
+        COUNT(IF(MONTH(OrderDate) = 8, 1, NULL)) AS "August",
+        COUNT(IF(MONTH(OrderDate) = 9, 1, NULL)) AS "September",
+        COUNT(IF(MONTH(OrderDate) = 10, 1, NULL)) AS "October",
+        COUNT(IF(MONTH(OrderDate) = 11, 1, NULL)) AS "November",
+        COUNT(IF(MONTH(OrderDate) = 12, 1, NULL)) AS "December"
     FROM Orders
     WHERE YEAR(OrderDate) = 1997;
     `);
@@ -472,22 +467,23 @@ async function task_1_21(db) {
  */
 async function task_1_22(db) {
     let result = await db.query(`
-    SELECT DISTINCT
-        Customers.CompanyName,
-        Products.ProductName AS "ProductName",
-        OrderDetails.UnitPrice AS "PricePerItem"
-    FROM Customers
-    INNER JOIN Orders ON Customers.CustomerID = Orders.CustomerID
-    INNER JOIN OrderDetails ON Orders.OrderID = OrderDetails.OrderID
-    INNER JOIN Products ON Products.ProductID = OrderDetails.ProductID
-    WHERE OrderDetails.UnitPrice = (
-                SELECT
-                    MAX(OrderDetails.UnitPrice) 
-                FROM Customers cust
-                INNER JOIN Orders ON Orders.CustomerID = cust.CustomerID
-                INNER JOIN OrderDetails ON Orders.OrderID = OrderDetails.OrderID
-                WHERE cust.CompanyName = Customers.CompanyName)
-                ORDER BY \`PricePerItem\` DESC, CompanyName, \`ProductName\` ASC;
+    SELECT
+        cust.CompanyName,
+        prod.ProductName as "ProductName",
+        ord_det.UnitPrice as "PricePerItem"        
+    FROM Customers AS cust
+    JOIN Orders AS ord ON ord.CustomerID = cust.CustomerID
+    JOIN OrderDetails AS ord_det ON ord_det.OrderID = ord.OrderID
+    JOIN Products AS prod ON prod.ProductID = ord_det.ProductID
+    WHERE ord_det.UnitPrice = (
+        SELECT MAX(ord_det_tmp.UnitPrice)
+        FROM Customers AS cust_tmp
+        JOIN Orders AS ord_tmp ON ord_tmp.CustomerID = cust_tmp.CustomerID
+        JOIN OrderDetails AS ord_det_tmp ON ord_tmp.OrderID = ord_det_tmp.OrderID
+        WHERE cust.CustomerID = cust_tmp.CustomerID
+    )
+    GROUP BY PricePerItem, CompanyName, ProductName
+    ORDER BY PricePerItem desc, CompanyName, ProductName;
     `);
     return result[0];
 }
