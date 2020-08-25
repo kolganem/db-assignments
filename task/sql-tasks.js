@@ -109,7 +109,7 @@ async function task_1_5(db) {
         ProductName AS "ProductName",
         QuantityPerUnit AS "QuantityPerUnit"
     FROM Products
-    WHERE ProductName REGEXP '^[A-F]'
+    WHERE ProductName >= 'A' AND ProductName < 'G'
     ORDER BY ProductName;
     `);
     return result[0];
@@ -467,23 +467,24 @@ async function task_1_21(db) {
  */
 async function task_1_22(db) {
     let result = await db.query(`
-    SELECT
-        cust.CompanyName,
-        prod.ProductName as "ProductName",
-        ord_det.UnitPrice as "PricePerItem"        
-    FROM Customers AS cust
-    JOIN Orders AS ord ON ord.CustomerID = cust.CustomerID
-    JOIN OrderDetails AS ord_det ON ord_det.OrderID = ord.OrderID
-    JOIN Products AS prod ON prod.ProductID = ord_det.ProductID
-    WHERE ord_det.UnitPrice = (
-        SELECT MAX(ord_det_tmp.UnitPrice)
-        FROM Customers AS cust_tmp
-        JOIN Orders AS ord_tmp ON ord_tmp.CustomerID = cust_tmp.CustomerID
-        JOIN OrderDetails AS ord_det_tmp ON ord_tmp.OrderID = ord_det_tmp.OrderID
-        WHERE cust.CustomerID = cust_tmp.CustomerID
-    )
-    GROUP BY PricePerItem, CompanyName, ProductName
-    ORDER BY PricePerItem desc, CompanyName, ProductName;
+   SELECT 
+        DISTINCT CompanyName,
+        ProductName,
+        PricePerItem
+    FROM (
+        SELECT 
+            Customers.CustomerID,
+            CompanyName,
+            MAX(OrderDetails.UnitPrice) AS 'PricePerItem'
+        FROM Customers
+        JOIN Orders ON Customers.CustomerID = Orders.CustomerID
+        JOIN OrderDetails ON Orders.OrderID = OrderDetails.OrderID
+        GROUP BY CustomerID
+    ) AS tmp_table
+    JOIN Orders ON tmp_table.CustomerID = Orders.CustomerID
+    JOIN OrderDetails ON Orders.OrderID = OrderDetails.OrderID AND tmp_table.PricePerItem = OrderDetails.UnitPrice
+    JOIN Products ON OrderDetails.ProductID = Products.ProductID
+    ORDER BY PricePerItem DESC, CompanyName, ProductName
     `);
     return result[0];
 }
